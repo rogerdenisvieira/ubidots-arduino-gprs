@@ -24,7 +24,6 @@ Inc
 */
 
 #include "UbiBuilder.h"
-
 #include "UbiTcp.h"
 
 UbiBuilder::UbiBuilder(UbiToken token, UbiApn apn, UbiApn apnUser, UbiApn apnPass, UbiServer server,
@@ -38,11 +37,13 @@ UbiBuilder::UbiBuilder(UbiToken token, UbiApn apn, UbiApn apnUser, UbiApn apnPas
 }
 
 UbiProtocol *UbiBuilder::builder() {
+
   UbiProtocol *ubiBuilder = builderTcp();
   return ubiBuilder;
 }
 
 UbiProtocol *builderTcp() {
+  Serial.println(F("Ubidots builderTcp"));
   UbiProtocol *tcpInstance = new UbiTCP(_token, _server, UBIDOTS_TCP_PORT, USER_AGENT, _apn, _apnUser, _apnPass);
   return tcpInstance;
 }

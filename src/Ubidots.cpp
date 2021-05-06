@@ -24,6 +24,8 @@ Inc
 */
 
 #include "Ubidots.h"
+#include "GPRS_Shield_Arduino.h"
+
 /**************************************************************************
  * Overloaded constructors
  ***************************************************************************/
@@ -35,7 +37,6 @@ Ubidots::Ubidots(UbiToken token, UbiApn apn, UbiApn apnUser, UbiApn apnPass, Ubi
 
 void Ubidots::_builder(UbiToken token, UbiApn apn, UbiApn apnUser, UbiApn apnPass, UbiServer server = UBI_INDUSTRIAL,
                        IotProtocol iotProtocol = UBI_TCP) {
-  UbiUtils::getUniqueID(_defaultDeviceLabel);
   _iotProtocol = iotProtocol;
   _context = (ContextUbi *)malloc(MAX_VALUES * sizeof(ContextUbi));
   _cloudProtocol = new UbiProtocolHandler(token, apn, apnUser, apnPass, server, iotProtocol);
@@ -96,7 +97,7 @@ bool Ubidots::send(const char *device_label, const char *device_name) {
 }
 
 float Ubidots::get(const char *device_label, const char *variable_label) {
-  return _cloudProtocol->get(device_label, variable_label);
+  _cloudProtocol->get(device_label, variable_label);
 }
 
 void Ubidots::setDebug(bool debug) {
@@ -114,9 +115,8 @@ void Ubidots::addContext(char *key_label, char *key_value) {
   _current_context++;
   if (_current_context >= MAX_VALUES) {
     if (_debug) {
-      Serial.println(
-          F("You are adding more than the maximum of consecutive "
-            "key-values pairs"));
+      Serial.println(F("You are adding more than the maximum of consecutive "
+                       "key-values pairs"));
     }
     _current_context = MAX_VALUES;
   }
@@ -130,13 +130,28 @@ void Ubidots::getContext(char *context_result) { getContext(context_result, _iot
 
 void Ubidots::getContext(char *context_result, IotProtocol iotProtocol) {
   // TCP context type
-  if (iotProtocol == UBI_TCP) {
+  if (iotProtocol == UBI_TCP || iotProtocol == UBI_UDP) {
     sprintf(context_result, "");
     for (uint8_t i = 0; i < _current_context;) {
       sprintf(context_result, "%s%s=%s", context_result, (_context + i)->key_label, (_context + i)->key_value);
       i++;
       if (i < _current_context) {
         sprintf(context_result, "%s$", context_result);
+      } else {
+        sprintf(context_result, "%s", context_result);
+        _current_context = 0;
+      }
+    }
+  }
+
+  // HTTP context type
+  if (iotProtocol == UBI_HTTP) {
+    sprintf(context_result, "");
+    for (uint8_t i = 0; i < _current_context;) {
+      sprintf(context_result, "%s\"%s\":\"%s\"", context_result, (_context + i)->key_label, (_context + i)->key_value);
+      i++;
+      if (i < _current_context) {
+        sprintf(context_result, "%s,", context_result);
       } else {
         sprintf(context_result, "%s", context_result);
         _current_context = 0;
